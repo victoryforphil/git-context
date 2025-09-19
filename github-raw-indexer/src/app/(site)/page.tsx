@@ -2,12 +2,14 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import { FileTree } from "@/components/file-tree";
+import { MarkdownPreview } from "@/components/markdown-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatTree } from "@/lib/markdown/formatTree";
 import type { FileNode, ParsedTarget } from "@/lib/github/types";
+import { formatTree } from "@/lib/markdown/formatTree";
 
 interface ErrorState {
   code: string;
@@ -38,6 +40,16 @@ export default function HomePage() {
     const tree = formatTree(nodes);
     return tree ? `${header}\n\n${tree}` : header;
   }, [appliedUrl, target, appliedDepth, nodes]);
+
+  const filesCount = useMemo(() => nodes.filter((node) => node.type === "file").length, [nodes]);
+  const characterCount = markdown.length;
+  const fileTreeBasePath = target?.path ?? "";
+  const fileTreeLabel = target
+    ? target.path
+      ? `Directory: ${target.path}/`
+      : "Repository files"
+    : "File tree";
+  const fileTreeHref = target ? buildSourceUrl(target, appliedUrl) : undefined;
 
   const handleSubmit = useCallback(async () => {
     if (!repoUrl) {
@@ -108,57 +120,80 @@ export default function HomePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="repoUrl">GitHub URL</Label>
-                <Input
-                  id="repoUrl"
-                  placeholder="https://github.com/user/repo[/tree|blob]/path"
-                  value={repoUrl}
-                  onChange={(event) => setRepoUrl(event.target.value)}
-                  autoComplete="off"
-                />
+            <div className="grid gap-6">
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="repoUrl">GitHub URL</Label>
+                  <Input
+                    id="repoUrl"
+                    placeholder="https://github.com/user/repo[/tree|blob]/path"
+                    value={repoUrl}
+                    onChange={(event) => setRepoUrl(event.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="depth">Max Depth</Label>
+                  <Input
+                    id="depth"
+                    type="number"
+                    min={0}
+                    max={8}
+                    value={maxDepth}
+                    onChange={(event) =>
+                      setMaxDepth(() => {
+                        const value = Number(event.target.value);
+                        if (!Number.isFinite(value) || value < 0) {
+                          return 0;
+                        }
+                        return Math.floor(value);
+                      })
+                    }
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Depth 0 lists items directly under the starting path. Increase to include nested directories.
+                  </p>
+                </div>
+                {error ? <ErrorMessage error={error} /> : null}
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={handleSubmit} disabled={!repoUrl || isLoading}>
+                    {isLoading ? "Generating…" : "Generate Index"}
+                  </Button>
+                  <Button variant="outline" onClick={handleCopy} disabled={!markdown}>
+                    {copied ? "Copied" : "Copy Markdown"}
+                  </Button>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="depth">Max Depth</Label>
-                <Input
-                  id="depth"
-                  type="number"
-                  min={0}
-                  max={8}
-                  value={maxDepth}
-                  onChange={(event) =>
-                    setMaxDepth(() => {
-                      const value = Number(event.target.value);
-                      if (!Number.isFinite(value) || value < 0) {
-                        return 0;
-                      }
-                      return Math.floor(value);
-                    })
-                  }
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
+                <FileTree
+                  nodes={nodes}
+                  basePath={fileTreeBasePath}
+                  rootLabel={fileTreeLabel}
+                  rootHref={fileTreeHref}
                 />
-                <p className="text-sm text-muted-foreground">
-                  Depth 0 lists items directly under the starting path. Increase to include nested directories.
-                </p>
-              </div>
-              {error ? <ErrorMessage error={error} /> : null}
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={handleSubmit} disabled={!repoUrl || isLoading}>
-                  {isLoading ? "Generating…" : "Generate Index"}
-                </Button>
-                <Button variant="outline" onClick={handleCopy} disabled={!markdown}>
-                  {copied ? "Copied" : "Copy Markdown"}
-                </Button>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="result">Result (Markdown)</Label>
-                <textarea
-                  id="result"
-                  className="min-h-[280px] w-full resize-y rounded-md border bg-transparent p-3 text-sm font-mono"
-                  value={markdown}
-                  readOnly
-                  placeholder="Generated markdown will appear here."
-                />
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="result">Result (Markdown)</Label>
+                    <textarea
+                      id="result"
+                      className="min-h-[220px] w-full resize-y rounded-md border bg-transparent p-3 text-sm font-mono"
+                      value={markdown}
+                      readOnly
+                      placeholder="Generated markdown will appear here."
+                      spellCheck={false}
+                    />
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <span>Character count: {characterCount.toLocaleString()}</span>
+                      <span>Files listed: {filesCount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <p className="text-sm font-medium">Markdown Preview</p>
+                    <div className="rounded-md border bg-card/60 p-4">
+                      <MarkdownPreview markdown={markdown} />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
