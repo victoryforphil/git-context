@@ -61,7 +61,7 @@ export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
           </svg>
         </div>
         <p className="text-sm text-muted-foreground">Generated markdown preview will appear here</p>
-        <p className="text-xs text-muted-foreground mt-1">Enter a GitHub URL and click "Generate Index" to get started</p>
+        <p className="text-xs text-muted-foreground mt-1">Enter a GitHub URL and click &quot;Generate Index&quot; to get started</p>
       </div>
     );
   }
