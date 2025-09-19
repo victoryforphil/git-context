@@ -36,6 +36,28 @@ Build for production:
 npm run build && npm start
 ```
 
+## Deploying to Vercel
+
+Deploying this Next.js app to Vercel is straightforward and leverages Vercel's native Next.js support.
+
+1. Push your code to Git (GitHub/GitLab/Bitbucket).
+2. Create a Vercel account and click "New Project".
+3. Import your repository.
+4. In the configuration step:
+   - Framework Preset: Next.js (auto-detected)
+   - Root Directory: `github-raw-indexer` (this repo is a monorepo; select this subfolder)
+   - Install Command: `npm ci` (default)
+   - Build Command: `npm run build` (default)
+   - Output Directory: `.next` (default)
+   - Node.js Version: 20 (optional but recommended to match CI)
+   - Environment Variables (optional): add `GITHUB_TOKEN` for higher GitHub API limits. Apply to Production and Preview.
+5. Click "Deploy".
+6. After the first deployment, you'll get a live Preview URL. Add a custom domain in Project Settings → Domains if desired.
+
+Notes:
+- Vercel will automatically create Preview Deployments for pull requests and a Production Deployment on merges to your default branch.
+- `GITHUB_TOKEN` is only read by the server route calling the GitHub API; public repos work without it but with much lower rate limits.
+
 ## Tech Stack
 - Next.js (App Router, TypeScript)
 - Tailwind CSS
