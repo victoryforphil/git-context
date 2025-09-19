@@ -1,63 +1,94 @@
-# git-dat-context
+# GitHub Raw Indexer
 
-Monorepo for GitHub content indexing experiments and tools.
+A Next.js + Tailwind + shadcn/ui app to generate a Markdown index of RAW file links for any GitHub repository, directory, or file path.
 
-## Packages
+## Features
 
-- `github-raw-indexer`: Next.js app that builds a Markdown index of RAW file links for any GitHub repository, directory, or file path. See its README for features and details.
+- Parse GitHub repo/tree/blob URLs (or `owner/repo` shorthand) and resolve the target ref automatically
+- Traverse repositories using the Git Trees API with graceful fallback to the Contents API when needed
+- Honor a configurable depth (0 = immediate children) and build a Markdown tree with RAW + HTML links
+- Server route proxies GitHub API requests and keeps your `GITHUB_TOKEN` on the server side only
+- Friendly error messages for invalid inputs, missing paths, and rate limits
 
-## Getting Started (Top-level)
+## Getting Started
 
-Clone and install dependencies for the `github-raw-indexer` app:
+Prerequisites:
+- Node.js 18+
+- npm
+
+Install dependencies:
 
 ```bash
-cd github-raw-indexer
 npm install
+```
+
+Run the dev server:
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open `http://localhost:3000`.
 
-## Scripts
+Build for production:
 
-Within `github-raw-indexer`:
+```bash
+npm run build && npm start
+```
 
-- `npm run dev`: Start Next.js dev server
-- `npm run build`: Build for production
-- `npm start`: Start production server
-- `npm run lint`: Run ESLint
-- `npm test`: Run Vitest
+## Deploying to Vercel
 
-## GitHub Actions CI
+Deploying this Next.js app to Vercel is straightforward and leverages Vercel's native Next.js support.
 
-This repo includes a CI workflow that runs on pull requests and pushes to main for the `github-raw-indexer` package:
+1. Push your code to Git (GitHub/GitLab/Bitbucket).
+2. Create a Vercel account and click "New Project".
+3. Import your repository.
+4. In the configuration step:
+   - Framework Preset: Next.js (auto-detected)
+   - Root Directory: `github-raw-indexer` (this repo is a monorepo; select this subfolder)
+   - Install Command: `npm ci` (default)
+   - Build Command: `npm run build` (default)
+   - Output Directory: `.next` (default)
+   - Node.js Version: 20 (optional but recommended to match CI)
+   - Environment Variables (optional): add `GITHUB_TOKEN` for higher GitHub API limits. Apply to Production and Preview.
+5. Click "Deploy".
+6. After the first deployment, you'll get a live Preview URL. Add a custom domain in Project Settings → Domains if desired.
 
-- Install dependencies (with cache)
-- Lint code (`next lint`)
-- Run tests (`vitest`)
-- Build the app (`next build`)
+Notes:
+- Vercel will automatically create Preview Deployments for pull requests and a Production Deployment on merges to your default branch.
+- `GITHUB_TOKEN` is only read by the server route calling the GitHub API; public repos work without it but with much lower rate limits.
 
-See `.github/workflows/ci.yml`.
+## Tech Stack
+- Next.js (App Router, TypeScript)
+- Tailwind CSS
+- shadcn/ui (locally scaffolded components)
 
-## Deployment
+## Environment
+Optional for higher GitHub API limits:
 
-The `github-raw-indexer` app is a standard Next.js (App Router) project and can be deployed to many platforms. Two common options:
+```bash
+# .env.local
+GITHUB_TOKEN=ghp_your_token_here
+```
 
-1. Vercel (recommended)
-   - Create a new Vercel project and select this repo
-   - Set Framework Preset to Next.js
-   - Root Directory: `github-raw-indexer`
-   - Build Command: `npm run build`
-   - Output: `.next`
-   - Environment Variables: optionally set `GITHUB_TOKEN` for higher API limits
+The token is only read on the server route that calls the GitHub API. Public repositories work without a token, but rate limits are much lower (60/hr).
 
-2. Self-hosted Node
-   - Build locally or in CI: `cd github-raw-indexer && npm ci && npm run build`
-   - Start: `npm start` (defaults to port 3000)
-   - Set `GITHUB_TOKEN` as an environment variable on the server if desired
+## Current Status
+- Full GitHub API integration with Markdown output and copy button
+- Server API route with rate-limit and error handling
+- Depth-aware traversal with Trees API + Contents fallback
 
-## Environment Variables
+## Project Structure
+- `src/app` - App Router pages and layout
+- `src/components` - UI components
+- `src/lib` - utilities
+- `notes/` - requirements and design notes
 
-- `GITHUB_TOKEN` (optional): increases GitHub API rate limits; used only by the server route.
+## Testing
 
-For more details, see `github-raw-indexer/README.md` and `github-raw-indexer/notes/`.
+```bash
+npm run lint
+npm test
+```
+
+See `notes/` and `agents.md` for more details.
