@@ -36,8 +36,8 @@ export function FileTree({ nodes, basePath = "", rootLabel = "File tree", rootHr
   const hasEntries = tree.children.length > 0;
 
   return (
-    <div className="rounded-md border bg-card text-card-foreground shadow-sm">
-      <div className="flex items-center justify-between border-b px-3 py-2">
+    <div className="h-full flex flex-col bg-card text-card-foreground">
+      <div className="flex items-center justify-between border-b px-4 py-3 bg-muted/40">
         <div>
           <p className="text-sm font-semibold leading-none">{rootLabel}</p>
           <p className="text-xs text-muted-foreground">
@@ -56,7 +56,7 @@ export function FileTree({ nodes, basePath = "", rootLabel = "File tree", rootHr
           </a>
         ) : null}
       </div>
-      <div className="max-h-[420px] overflow-auto px-3 py-3 text-sm">
+      <div className="flex-1 overflow-auto px-4 py-3 text-sm">
         {hasEntries ? (
           <ul className="space-y-1">
             {tree.children.map((item) =>
@@ -87,7 +87,7 @@ function DirectoryTreeItem({ item, depth }: { item: DirectoryNode; depth: number
             type="button"
             onClick={() => setOpen((prev) => !prev)}
             className="flex flex-1 items-center gap-2 text-left font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-expanded={open}
+            aria-expanded={open ? "true" : "false"}
           >
             <ChevronDown
               className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}

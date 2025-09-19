@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 
 import { FileTree } from "@/components/file-tree";
 import { MarkdownPreview } from "@/components/markdown-preview";
@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"; 
+import { Copy, Eye, Code, FileText, FolderOpen, Download, Github } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { FileNode, ParsedTarget } from "@/lib/github/types";
 import { formatTree } from "@/lib/markdown/formatTree";
+import useLocalStorage from "@/lib/hooks/useLocalStorage";
 
 interface ErrorState {
   code: string;
@@ -21,8 +25,8 @@ type ResolvedTarget = ParsedTarget & { ref: string };
 const DEFAULT_DEPTH = 2;
 
 export default function HomePage() {
-  const [repoUrl, setRepoUrl] = useState("");
-  const [maxDepth, setMaxDepth] = useState<number>(DEFAULT_DEPTH);
+  const [repoUrl, setRepoUrl] = useLocalStorage("github-indexer-url", "");
+  const [maxDepth, setMaxDepth] = useLocalStorage("github-indexer-depth", DEFAULT_DEPTH);
   const [nodes, setNodes] = useState<FileNode[]>([]);
   const [target, setTarget] = useState<ResolvedTarget | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +34,12 @@ export default function HomePage() {
   const [copied, setCopied] = useState(false);
   const [appliedDepth, setAppliedDepth] = useState<number>(DEFAULT_DEPTH);
   const [appliedUrl, setAppliedUrl] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
+  const [viewMode, setViewMode] = useState<"raw" | "preview">("raw");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const markdown = useMemo(() => {
     if (!nodes.length || !target) {
@@ -109,97 +119,170 @@ export default function HomePage() {
   }, [markdown]);
 
   return (
-    <main className="container py-12">
-      <div className="mx-auto max-w-3xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>GitHub RAW Indexer</CardTitle>
-            <CardDescription>
-              Generate a Markdown index of RAW links for any GitHub repository, directory, or file. All GitHub requests run on the
-              server so your token stays private.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6">
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="repoUrl">GitHub URL</Label>
-                  <Input
-                    id="repoUrl"
-                    placeholder="https://github.com/user/repo[/tree|blob]/path"
-                    value={repoUrl}
-                    onChange={(event) => setRepoUrl(event.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="depth">Max Depth</Label>
-                  <Input
-                    id="depth"
-                    type="number"
-                    min={0}
-                    max={8}
-                    value={maxDepth}
-                    onChange={(event) =>
-                      setMaxDepth(() => {
-                        const value = Number(event.target.value);
-                        if (!Number.isFinite(value) || value < 0) {
-                          return 0;
-                        }
-                        return Math.floor(value);
-                      })
-                    }
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Depth 0 lists items directly under the starting path. Increase to include nested directories.
-                  </p>
-                </div>
-                {error ? <ErrorMessage error={error} /> : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={handleSubmit} disabled={!repoUrl || isLoading}>
-                    {isLoading ? "Generating…" : "Generate Index"}
-                  </Button>
-                  <Button variant="outline" onClick={handleCopy} disabled={!markdown}>
-                    {copied ? "Copied" : "Copy Markdown"}
-                  </Button>
-                </div>
+    <div className="flex min-h-dvh flex-col">
+      {/* Header with Configuration */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between px-6 py-3">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <FileText className="h-4 w-4" />
               </div>
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
-                <FileTree
-                  nodes={nodes}
-                  basePath={fileTreeBasePath}
-                  rootLabel={fileTreeLabel}
-                  rootHref={fileTreeHref}
-                />
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="result">Result (Markdown)</Label>
-                    <textarea
-                      id="result"
-                      className="min-h-[220px] w-full resize-y rounded-md border bg-transparent p-3 text-sm font-mono"
-                      value={markdown}
-                      readOnly
-                      placeholder="Generated markdown will appear here."
-                      spellCheck={false}
-                    />
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span>Character count: {characterCount.toLocaleString()}</span>
-                      <span>Files listed: {filesCount.toLocaleString()}</span>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <p className="text-sm font-medium">Markdown Preview</p>
-                    <div className="rounded-md border bg-card/60 p-4">
-                      <MarkdownPreview markdown={markdown} />
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <h1 className="text-lg font-semibold">GitHub Raw Indexer</h1>
+                <p className="text-xs text-muted-foreground">Generate markdown indexes</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" asChild>
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                <Github className="h-4 w-4 mr-2" />
+                GitHub
+              </a>
+            </Button>
+            <ThemeToggle />
+          </div>
+        </div>
+        
+        {/* Configuration Bar */}
+        <div className="border-t bg-muted/20 px-6 py-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Label htmlFor="repoUrl" className="text-sm font-medium whitespace-nowrap">URL:</Label>
+              <Input
+                id="repoUrl"
+                placeholder="https://github.com/user/repo[/tree|blob]/path"
+                value={repoUrl}
+                onChange={(event) => setRepoUrl(event.target.value)}
+                autoComplete="off"
+                className="flex-1 min-w-[300px]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="depth" className="text-sm font-medium whitespace-nowrap">Depth:</Label>
+              <Input
+                id="depth"
+                type="number"
+                min={0}
+                max={8}
+                value={maxDepth}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (!Number.isFinite(value) || value < 0) {
+                    setMaxDepth(0);
+                  } else {
+                    setMaxDepth(Math.floor(value));
+                  }
+                }}
+                className="w-20"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={handleSubmit} 
+                disabled={!mounted || !repoUrl.trim() || isLoading}
+                size="sm"
+              >
+                <Code className="h-4 w-4 mr-2" />
+                {isLoading ? "Generating…" : "Generate"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleCopy} 
+                disabled={!mounted || !markdown}
+                size="sm"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+            {target && (
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span>{characterCount.toLocaleString()} chars</span>
+                <span>{filesCount.toLocaleString()} files</span>
+              </div>
+            )}
+          </div>
+          {error && (
+            <div className="mt-3">
+              <ErrorMessage error={error} />
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex flex-1 w-full overflow-hidden">
+        <ResizablePanelGroup direction="horizontal" className="w-full">
+          {/* File Tree Panel */}
+          <ResizablePanel defaultSize={35} minSize={20} maxSize={50}>
+            <div className="flex h-full flex-col border-r">
+              <FileTree
+                nodes={nodes}
+                basePath={fileTreeBasePath}
+                rootLabel={fileTreeLabel}
+                rootHref={fileTreeHref}
+              />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          
+          {/* Markdown Panel */}
+          <ResizablePanel defaultSize={65} minSize={30}>
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between border-b bg-background px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  <h2 className="font-semibold">Markdown Output</h2>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant={viewMode === "raw" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("raw")}
+                  >
+                    <Code className="h-4 w-4 mr-2" />
+                    Raw
+                  </Button>
+                  <Button
+                    variant={viewMode === "preview" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("preview")}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview
+                  </Button>
+                  <div className="mx-2 h-4 w-px bg-border" />
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={handleCopy} 
+                    disabled={!mounted || !markdown}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {viewMode === "raw" ? (
+                <textarea
+                  className="flex-1 resize-none border-0 bg-transparent p-4 text-sm font-mono outline-none"
+                  value={markdown}
+                  readOnly
+                  placeholder="Generated markdown will appear here."
+                  spellCheck={false}
+                />
+              ) : (
+                <div className="flex-1 overflow-auto p-4">
+                  <MarkdownPreview markdown={markdown} />
+                </div>
+              )}
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </main>
+    </div>
   );
 }
 
